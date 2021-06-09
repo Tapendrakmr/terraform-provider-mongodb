@@ -1,0 +1,4 @@
+go mod init terraform-provider-mongodb
+go mod tidy
+go mod vendor
+go build -o terraform-provider-mongodb.exe
