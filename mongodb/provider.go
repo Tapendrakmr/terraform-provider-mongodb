@@ -9,20 +9,20 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"publickey": &schema.Schema{
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+			"mongodb_public_key": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("MONGODBCLOUD_PUBLIC_KEY", ""),
 			},
-			"privatekey": &schema.Schema{
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+			"mongodb_private_key": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("MONGODBCLOUD_PRIVATE_KEY", ""),
 			},
-			"orgid": &schema.Schema{
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+			"mongodb_orgid": &schema.Schema{
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("MONGODBCLOUD_ORGID", ""),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -36,9 +36,9 @@ func Provider() *schema.Provider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	publickey := d.Get("publickey").(string)
-	privatekey := d.Get("privatekey").(string)
-	orgid := d.Get("orgid").(string)
+	publickey := d.Get("mongodb_public_key").(string)
+	privatekey := d.Get("mongodb_private_key").(string)
+	orgid := d.Get("mongodb_orgid").(string)
 	return client.NewClient(publickey, privatekey, orgid), nil
 
 }

@@ -8,11 +8,11 @@ terraform {
 }
 
 provider "mongodb" {
-  publickey  = "PUBLIC KEY"
-  privatekey = "PRIVATE KEY"
-  orgid="ORGID"
+  mongodb_public_key  = "REPLACE_MONGODBCLOUD_PUBLIC_KEY"
+  mongodb_private_key = "REPLACE_MONGODBCLOUD_PRIVATE_KEY"
+  mongodb_orgid="REPLACE_MONGODBCLOUD_ORGID"
 }
-# For new user
+
 resource "mongodb_user" "user" {
   username="user@gmail.com"
   roles{
@@ -21,15 +21,10 @@ resource "mongodb_user" "user" {
   }
 }
 
-# import user
-resource "mongodb_user" "newuser"{
-  
-}
-# Read existing user
 data "mongodb_user" "user" {
   id = "user@gmail.com"
 }
 
-output "user" {
+output "datasource_user" {
   value = data.mongodb_user.user
 }

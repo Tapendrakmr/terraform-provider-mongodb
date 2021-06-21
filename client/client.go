@@ -239,3 +239,12 @@ func getDigestAuthrization(digestParts map[string]string) string {
 		d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
 	return authorization
 }
+
+func (c *Client) IsRetry(err error) bool {
+	if err != nil {
+		if strings.Contains(err.Error(), "\"responseCode\":503") == true {
+			return true
+		}
+	}
+	return false
+}

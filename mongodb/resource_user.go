@@ -8,8 +8,10 @@ import (
 	"regexp"
 	"strings"
 	"terraform-provider-mongodb/client"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -34,7 +36,7 @@ func resourceUser() *schema.Resource {
 		UpdateContext: resourceUserUpdate,
 		DeleteContext: resourceUserDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: resourceUserImporter,
 		},
 		Schema: map[string]*schema.Schema{
 			"username": &schema.Schema{
@@ -141,15 +143,28 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		Username: d.Get("username").(string),
 		Roles:    ois,
 	}
-	newuser, err := apiClient.AddNewUser(&user)
-	if err != nil {
-		log.Println("[ERROR]: ", err)
-		return diag.FromErr(err)
+
+	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
+		newuser, err := apiClient.AddNewUser(&user)
+		if err != nil {
+			if apiClient.IsRetry(err) {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		d.SetId(newuser.Username)
+		d.Set("inviterusername", newuser.InviterUsername)
+		d.Set("orgname", newuser.OrgName)
+		d.Set("username", newuser.Username)
+		return nil
+	})
+	if retryErr != nil {
+		if strings.Contains(retryErr.Error(), "User Does Not Exist") == true {
+			d.SetId("")
+			return diags
+		}
+		return diag.FromErr(retryErr)
 	}
-	d.SetId(newuser.Username)
-	d.Set("inviterusername", newuser.InviterUsername)
-	d.Set("orgname", newuser.OrgName)
-	d.Set("username", newuser.Username)
 	return diags
 }
 
@@ -160,36 +175,45 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	}
 	apiClient := m.(*client.Client)
 	userId := d.Id()
-	user, err := apiClient.GetUser(userId)
-	if err != nil {
-		log.Println("[ERROR]: ", err)
-		if strings.Contains(err.Error(), "not found") {
-			d.SetId("")
-		} else {
-			return diag.FromErr(err)
-		}
-	}
-	if len(user.ID) > 0 {
-		fmt.Println("Set all values")
-		d.SetId(user.Username)
-		d.Set("userid", user.ID)
-		d.Set("country", user.Country)
-		d.Set("email_address", user.EmailAddress)
-		d.Set("first_name", user.FirstName)
-		d.Set("last_name", user.LastName)
-		roles := make([]map[string]interface{}, 0)
-		for _, v := range user.Roles {
-			role := make(map[string]interface{})
-			role["org_id"] = v.OrgID
-			role["role_name"] = v.RoleName
-			role["group_id"] = v.GroupID
-			roles = append(roles, role)
-		}
-		d.Set("roles", roles)
-		d.Set("username", user.Username)
 
+	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
+		user, err := apiClient.GetUser(userId)
+		if err != nil {
+			if apiClient.IsRetry(err) {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		if len(user.ID) > 0 {
+			fmt.Println("Set all values")
+			d.SetId(user.Username)
+			d.Set("userid", user.ID)
+			d.Set("country", user.Country)
+			d.Set("email_address", user.EmailAddress)
+			d.Set("first_name", user.FirstName)
+			d.Set("last_name", user.LastName)
+			roles := make([]map[string]interface{}, 0)
+			for _, v := range user.Roles {
+				role := make(map[string]interface{})
+				role["org_id"] = v.OrgID
+				role["role_name"] = v.RoleName
+				role["group_id"] = v.GroupID
+				roles = append(roles, role)
+			}
+			d.Set("roles", roles)
+			d.Set("username", user.Username)
+		}
+		return nil
+	})
+	if retryErr != nil {
+		if strings.Contains(retryErr.Error(), "User Does Not Exist") == true {
+			d.SetId("")
+			return diags
+		}
+		return diag.FromErr(retryErr)
 	}
 	return diags
+
 }
 
 func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -231,10 +255,22 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	updatevalue := client.UpdateUser{
 		Roles: ois,
 	}
-	_, err := apiClient.UpdateUser(&updatevalue, userId)
-	if err != nil {
-		log.Printf("[Error] Error updating user :%s", err)
-		return diag.FromErr(err)
+	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
+		_, error = apiClient.UpdateUser(&updatevalue, userId)
+		if error != nil {
+			if apiClient.IsRetry(error) {
+				return resource.RetryableError(error)
+			}
+			return resource.NonRetryableError(error)
+		}
+		return nil
+	})
+	if retryErr != nil {
+		time.Sleep(2 * time.Second)
+		return diag.FromErr(retryErr)
+	}
+	if error != nil {
+		return diag.FromErr(error)
 	}
 	return resourceUserRead(ctx, d, m)
 }
@@ -243,4 +279,39 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface
 	var diags diag.Diagnostics
 	d.SetId("")
 	return diags
+}
+
+func resourceUserImporter(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	apiClient := m.(*client.Client)
+	userId := d.Id()
+	user, err := apiClient.GetUser(userId)
+	if err != nil {
+		log.Println("[ERROR]: ", err)
+		if strings.Contains(err.Error(), "not found") {
+			d.SetId("")
+		} else {
+			return nil, err
+		}
+	}
+	if len(user.ID) > 0 {
+		fmt.Println("Set all values")
+		d.SetId(user.Username)
+		d.Set("userid", user.ID)
+		d.Set("country", user.Country)
+		d.Set("email_address", user.EmailAddress)
+		d.Set("first_name", user.FirstName)
+		d.Set("last_name", user.LastName)
+		roles := make([]map[string]interface{}, 0)
+		for _, v := range user.Roles {
+			role := make(map[string]interface{})
+			role["org_id"] = v.OrgID
+			role["role_name"] = v.RoleName
+			role["group_id"] = v.GroupID
+			roles = append(roles, role)
+		}
+		d.Set("roles", roles)
+		d.Set("username", user.Username)
+
+	}
+	return []*schema.ResourceData{d}, nil
 }
