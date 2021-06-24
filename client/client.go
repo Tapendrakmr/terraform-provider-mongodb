@@ -137,8 +137,8 @@ func (c *Client) AddNewUser(item *NewUser) (*NewReturnUser, error) {
 	digestParts := digestParts(resp)
 	digestParts["uri"] = url
 	digestParts["method"] = method
-	digestParts["username"] = "bnaouyco"
-	digestParts["password"] = "0d9f4ebf-2153-48e6-a579-3eeb5a9758e8"
+	digestParts["username"] = c.publickey
+	digestParts["password"] = c.privateKey
 	req, err = http.NewRequest(method, url, payload)
 	req.Header.Set("Authorization", getDigestAuthrization(digestParts))
 	req.Header.Set("Content-Type", "application/json")
@@ -177,8 +177,8 @@ func (c *Client) UpdateUser(updatevalue *UpdateUser, userId string) (*User, erro
 	digestParts := digestParts(resp)
 	digestParts["uri"] = url
 	digestParts["method"] = method
-	digestParts["username"] = "bnaouyco"
-	digestParts["password"] = "0d9f4ebf-2153-48e6-a579-3eeb5a9758e8"
+	digestParts["username"] = c.publickey
+	digestParts["password"] = c.privateKey
 	req, err = http.NewRequest(method, url, payload)
 	req.Header.Set("Authorization", getDigestAuthrization(digestParts))
 	req.Header.Set("Content-Type", "application/json")

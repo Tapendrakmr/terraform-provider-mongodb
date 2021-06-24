@@ -8,9 +8,9 @@ terraform {
 }
 
 provider "mongodb" {
-  mongodb_public_key  = "REPLACE_MONGODBCLOUD_PUBLIC_KEY"
-  mongodb_private_key = "REPLACE_MONGODBCLOUD_PRIVATE_KEY"
-  mongodb_orgid="REPLACE_MONGODBCLOUD_ORGID"
+  mongodb_public_key  = var.mongodb_public_key
+  mongodb_private_key = var.mongodb_private_key
+  mongodb_orgid=var.mongodb_private_key
 }
 
 resource "mongodb_user" "user" {
