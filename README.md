@@ -134,13 +134,6 @@ resource "mongodb_user" "user1" {
 2. Run the command `terraform import mongodb_user.resource_name [EMAIL_ID]`
 3.Run `terraform plan`, if output shows `0 to add, 0 to change and 0 to destroy` user import is successful, otherwise recheck the user data in `resource` block with user data in mongoDB website.
 
-### Testing the Provider
-
-1. Navigate to the test file directory.
-2. Run command `go test` for unit testing and for acceptance testing run command `TF_ACC=1 go test` . These commands will give combined test results for the execution or errors if any failure occurs.
-3. If you want to see test result of each test function individually while running test in a single go, run command `go test -v`
-4. To check test cover run `go test -cover`
-
 ## Example Usage <a id="example-usage"></a>
 
 ```terraform

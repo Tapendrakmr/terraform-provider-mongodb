@@ -1,18 +1,14 @@
 package client
 
 import (
-	"bytes"
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
-
-	dac "github.com/xinsnake/go-http-digest-auth-client"
 )
 
 type User struct {
@@ -51,11 +47,15 @@ var (
 	Errors = make(map[int]string)
 )
 
+type ErrorStruct struct {
+	ErrorCode string `json:"errorCode,omitempty"`
+}
+
 func init() {
 	Errors[400] = "Bad Request, StatusCode = 400"
 	Errors[404] = "User Does Not Exist , StatusCode = 404"
 	Errors[409] = "User Already Exist, StatusCode = 409"
-	Errors[401] = "Unautharized Access, StatusCode = 401"
+	Errors[401] = "Unauthorized Access, StatusCode = 401"
 	Errors[429] = "User Has Sent Too Many Request, StatusCode = 429"
 }
 
@@ -67,9 +67,6 @@ type Client struct {
 }
 
 func NewClient(publickey string, privateKey string, orgid string) *Client {
-	// publickey = os.Getenv("PUBLIC_KEY")
-	// privateKey = os.Getenv("PRIVATE_KEY")
-	// orgid = os.Getenv("ORGID")
 	return &Client{
 		publickey:  publickey,
 		privateKey: privateKey,
@@ -79,41 +76,53 @@ func NewClient(publickey string, privateKey string, orgid string) *Client {
 }
 
 func (c *Client) GetUser(username string) (*User, error) {
-	fmt.Println("Get user")
-	body, err := c.gethttpRequest(fmt.Sprintf("%v", username), "GET", bytes.Buffer{})
+	url := "https://cloud.mongodb.com/api/atlas/v1.0/users/byName/" + username
+	method := "GET"
+	req, err := http.NewRequest(method, url, nil)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("[READ ERROR]: ", err)
-		return nil, err
+		panic(err)
 	}
-	user := &User{}
-	err = json.NewDecoder(body).Decode(user)
+	defer resp.Body.Close()
+	digestParts := digestParts(resp)
+	digestParts["uri"] = url
+	digestParts["method"] = method
+	digestParts["username"] = c.publickey
+	digestParts["password"] = c.privateKey
+	req, err = http.NewRequest(method, url, nil)
+	req.Header.Set("Authorization", getDigestAuthrization(digestParts))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
 	if err != nil {
-		log.Println("[READ ERROR]: ", err)
-		return nil, err
+
+		fmt.Print(err)
+		return nil, fmt.Errorf(err.Error())
 	}
-	return user, nil
-}
-func (c *Client) gethttpRequest(username, method string, body bytes.Buffer) (closer io.ReadCloser, err error) {
-	t := dac.NewTransport(c.publickey, c.privateKey)
-	uri := "https://cloud.mongodb.com/api/atlas/v1.0/users/byName/" + username
-	req, err := http.NewRequest(method, uri, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	res, err := t.RoundTrip(req)
-	if err != nil {
-		log.Println("[ERROR]: ", err)
-		return nil, err
-	}
-	if res.StatusCode != http.StatusOK {
-		respBody := new(bytes.Buffer)
-		_, err := respBody.ReadFrom(res.Body)
+	statuscode := (int)(resp.StatusCode)
+	if statuscode >= 200 && statuscode <= 400 {
+		newbody := resp.Body
+		userInfo := &User{}
+		err = json.NewDecoder(newbody).Decode(userInfo)
 		if err != nil {
-			return nil, fmt.Errorf("Error : %v", Errors[res.StatusCode])
+			return nil, fmt.Errorf(err.Error())
 		}
-		return nil, fmt.Errorf("Error : %v ", Errors[res.StatusCode])
+		return userInfo, nil
 	}
-	return res.Body, nil
+	fmt.Print(statuscode)
+
+	newbody := resp.Body
+	errorData := &ErrorStruct{}
+	err = json.NewDecoder(newbody).Decode(errorData)
+	if err != nil {
+		return nil, fmt.Errorf(err.Error())
+	}
+	if errorData.ErrorCode != "" {
+		return nil, fmt.Errorf("Error : User Does Not Exist")
+	}
+	return nil, fmt.Errorf("Error : Unauthorized Access")
 }
 
 func (c *Client) AddNewUser(item *NewUser) (*NewReturnUser, error) {
@@ -197,6 +206,7 @@ func (c *Client) UpdateUser(updatevalue *UpdateUser, userId string) (*User, erro
 		}
 		return newItemUser, nil
 	}
+
 	return nil, fmt.Errorf("Error : %v ", Errors[statuscode])
 }
 
@@ -242,7 +252,7 @@ func getDigestAuthrization(digestParts map[string]string) string {
 
 func (c *Client) IsRetry(err error) bool {
 	if err != nil {
-		if strings.Contains(err.Error(), "\"responseCode\":503") == true {
+		if strings.Contains(err.Error(), "\"StatusCode\":429") == true {
 			return true
 		}
 	}

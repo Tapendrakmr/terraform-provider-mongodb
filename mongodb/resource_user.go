@@ -159,7 +159,7 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return nil
 	})
 	if retryErr != nil {
-		if strings.Contains(retryErr.Error(), "User Does Not Exist") == true {
+		if strings.Contains(retryErr.Error(), "Unautharized Access") == true {
 			d.SetId("")
 			return diags
 		}
@@ -286,12 +286,7 @@ func resourceUserImporter(ctx context.Context, d *schema.ResourceData, m interfa
 	userId := d.Id()
 	user, err := apiClient.GetUser(userId)
 	if err != nil {
-		log.Println("[ERROR]: ", err)
-		if strings.Contains(err.Error(), "not found") {
-			d.SetId("")
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 	if len(user.ID) > 0 {
 		fmt.Println("Set all values")
