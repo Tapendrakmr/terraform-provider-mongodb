@@ -276,7 +276,37 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	apiClient := m.(*client.Client)
 	var diags diag.Diagnostics
+	var err error
+	userId := d.Get("username").(string)
+	userInfo, error := apiClient.GetUser(userId)
+	if error != nil {
+		log.Println("[ERROR]: ", error)
+		if strings.Contains(error.Error(), "not found") {
+			d.SetId("")
+		} else {
+			return diag.FromErr(error)
+		}
+	}
+	userId = userInfo.ID
+
+	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
+		if err = apiClient.DeleteUser(userId); err != nil {
+			if apiClient.IsRetry(err) {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		return nil
+	})
+	if retryErr != nil {
+		time.Sleep(2 * time.Second)
+		return diag.FromErr(retryErr)
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	d.SetId("")
 	return diags
 }

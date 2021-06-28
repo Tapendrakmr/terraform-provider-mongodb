@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -208,6 +209,41 @@ func (c *Client) UpdateUser(updatevalue *UpdateUser, userId string) (*User, erro
 	}
 
 	return nil, fmt.Errorf("Error : %v ", Errors[statuscode])
+}
+
+func (c *Client) DeleteUser(UserId string) error {
+	url := "https://cloud.mongodb.com/api/atlas/v1.0/orgs/" + c.orgid + "/users/" + UserId
+	method := "DELETE"
+	req, err := http.NewRequest(method, url, nil)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	digestParts := digestParts(resp)
+	digestParts["uri"] = url
+	digestParts["method"] = method
+	digestParts["username"] = "bnaouyco"
+	digestParts["password"] = "0d9f4ebf-2153-48e6-a579-3eeb5a9758e8"
+	req, err = http.NewRequest(method, url, nil)
+	req.Header.Set("Authorization", getDigestAuthrization(digestParts))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Println("[DELETE ERROR]: ", err)
+		return err
+	}
+	statuscode := (int)(resp.StatusCode)
+	if statuscode >= 200 && statuscode <= 400 {
+		return nil
+	}
+
+	log.Println(Errors[statuscode])
+	return fmt.Errorf("Error : %v \n", Errors[statuscode])
+
 }
 
 func digestParts(resp *http.Response) map[string]string {
