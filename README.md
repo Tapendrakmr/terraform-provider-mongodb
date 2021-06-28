@@ -1,7 +1,6 @@
 
-- This terraform providre allows to perform Create ,Read ,Update and Import MongoDB user
+- This terraform providre allows to perform Create ,Read ,Update ,Delete and Import MongoDB user
 - To import a user use EmailID
-- MongoDB doesn't provide an API to remove a user from organization
 
 ## Requirements
 
@@ -71,7 +70,7 @@ move terraform-provider-mongodb.exe %APPDATA%\terraform.d\plugins\mongdb.com\edu
 ### Application Credential Integration in terraform
 1. Add terraform block and provider block as shown in example usage.  
 2. Get credentials :Public Key, Private Key and Organization ID  
-3.Assign the above credentials to the respective field in the provider block.` <br>
+3. Assign the above credentials to the respective field in the provider block.` <br>
 
 ### Basic Terraform Commands
 
@@ -83,48 +82,23 @@ move terraform-provider-mongodb.exe %APPDATA%\terraform.d\plugins\mongdb.com\edu
 
 ### Invite User
 
-1.  Add the user email and [Organization roles](https://docs.cloudmanager.mongodb.com/reference/api/user-update/) in the respective field as shown in  example usage
+1.  Add the user email and [Organization roles](https://docs.atlas.mongodb.com/reference/api/user-update/) in the respective field as shown in  example usage
 2. Run the basic terraform commands.
 3.  You will see that a user has been successfully created and an invitation mail has been sent to the user.
 
-```
-resource "mongodb_user" "user1" {
-  username="user@gmail.com"
-  roles{
-    org_id="[ORGANIZATION ID]"
-    role_name="[ROLE NAME]"
-  }
-}
-```
 ### Update the user
 
 :heavy_exclamation_mark: [IMPORTANT] : If you own an organization or project, you can update the user roles for any user with membership in that organization or project. You cannot modify any other user profile information.
 
-1. Update the data of the user resource block as show in example usage un the basic terraform commands to update user.User is not allowed to update email.
+1. Update the data of the user resource block as show in [example usage](#example-usage) un the basic terraform commands to update user.User is not allowed to update email.
 <br>
 
-2. You can also allot a project with its projectId or groupId and [project roles](https://docs.cloudmanager.mongodb.com/reference/api/user-update/) to a user .
-
-```
-resource "mongodb_user" "user1" {
-  username="user@gmail.com"
-  roles{
-    org_id="[ORGANIZATION ID]"
-    role_name="[ROLE NAME]"
-  }
-  roles{
-    group_id="[ORGANIZATION ID]"
-    role_name="[ROLE NAME]"
-  }
-}
-```
 ### Read the User Data
 
 1. Add `data` and `output` blocks as shown in the [example usage](#example-usage) and run the basic terraform commands.
 
 ### Delete the user
 
-:heavy_exclamation_mark: [IMPORTANT] : MongoDb doesn’t provide an API to delete users. To delete user from state file follow below instructions<br>
 
 1. Delete the `resource` block of the user and run `terraform apply`.
 
@@ -154,14 +128,7 @@ provider "mongodb" {
 
 resource "mongodb_user" "user1" {
   username="user@gmail.com"
-  roles{
-    org_id="[ORGANIZATION ID]"
-    role_name="[ROLE NAME]"
-  }
-  roles{
-    group_id="[ORGANIZATION ID]"
-    role_name="[ROLE NAME]"
-  }
+  roles=["ORG_Role1","ORG_Role2",..]
 }
 
 data "mongodb_user" "user" {
@@ -177,6 +144,13 @@ output "datasource_user" {
 
 - `email` (string) - The email id associated with the user account.
 - `org_id` (string) - The id associated with the organization.
-- `role_name` (string) - Type of [Roles](https://docs.cloudmanager.mongodb.com/reference/api/user-update/).
-- `group_id` (string) - The id associated with the project.
-- `role_name` (string) - Type of [Roles](https://docs.cloudmanager.mongodb.com/reference/api/user-update/).
+- `role_name` (List) - Each string in the array represents a organiation role you want to assign to the user.You must specify an array even if you are only associating a single role with the team. The following are valid roles:
+ 
+  - ORG_OWNER
+  - ORG_GROUP_CREATOR
+  - ORG_BILLING_ADMIN
+  - ORG_READ_ONLY
+  - ORG_MEMBER
+
+
+

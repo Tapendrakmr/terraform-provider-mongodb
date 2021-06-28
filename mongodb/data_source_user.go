@@ -33,22 +33,9 @@ func dataSourceUser() *schema.Resource {
 				Computed: true,
 			},
 			"roles": &schema.Schema{
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"org_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-						"role_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-					},
-				},
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"username": &schema.Schema{
 				Type:     schema.TypeString,
@@ -76,12 +63,11 @@ func dataSourceUserRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("emailaddress", user.EmailAddress)
 	d.Set("firstname", user.FirstName)
 	d.Set("lastname", user.LastName)
-	roles := make([]map[string]interface{}, 0)
+	roles := make([]string, 0)
 	for _, v := range user.Roles {
-		role := make(map[string]interface{})
-		role["org_id"] = v.OrgID
-		role["role_name"] = v.RoleName
-		roles = append(roles, role)
+		if v.OrgID != "" {
+			roles = append(roles, v.RoleName)
+		}
 	}
 	d.Set("roles", roles)
 	d.Set("username", user.Username)

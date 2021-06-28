@@ -170,8 +170,19 @@ func (c *Client) AddNewUser(item *NewUser) (*NewReturnUser, error) {
 	return nil, fmt.Errorf("Error : %v ", Errors[statuscode])
 }
 
-func (c *Client) UpdateUser(updatevalue *UpdateUser, userId string) (*User, error) {
+func (c *Client) UpdateUser(roles []string, userId string) (*User, error) {
 	fmt.Println("Update user")
+	ois := []Role{}
+	for _, role := range roles {
+		oi := Role{
+			OrgID:    c.orgid,
+			RoleName: role,
+		}
+		ois = append(ois, oi)
+	}
+	updatevalue := UpdateUser{
+		Roles: ois,
+	}
 	reqjson, _ := json.Marshal(updatevalue)
 	payload := strings.NewReader(string(reqjson))
 	url := "https://cloud.mongodb.com/api/public/v1.0/users/" + userId

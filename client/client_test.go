@@ -107,22 +107,15 @@ func TestClient_UpdateUser(t *testing.T) {
 	testCases := []struct {
 		testName     string
 		userId       string
-		updatedUser  *UpdateUser
+		updatedUser  []string
 		expectErr    bool
 		expectedResp *User
 	}{
 		{
-			testName: "user exist",
-			userId:   "UserID",
-			updatedUser: &UpdateUser{
-				Roles: []Role{
-					{
-						OrgID:    "ORGID",
-						RoleName: "ORG_MEMBER",
-					},
-				},
-			},
-			expectErr: false,
+			testName:    "user exist",
+			userId:      "UserID",
+			updatedUser: []string{"ORG_MEMBER"},
+			expectErr:   false,
 			expectedResp: &User{
 				Country:      "Country",
 				EmailAddress: "ExistUserEmail",
@@ -140,16 +133,9 @@ func TestClient_UpdateUser(t *testing.T) {
 			},
 		},
 		{
-			testName: "user not exist",
-			userId:   "00000",
-			updatedUser: &UpdateUser{
-				Roles: []Role{
-					{
-						OrgID:    "ORGID",
-						RoleName: "ORG_MEMBER",
-					},
-				},
-			},
+			testName:     "user not exist",
+			userId:       "00000",
+			updatedUser:  []string{"ORG_MEMBER"},
 			expectErr:    true,
 			expectedResp: nil,
 		},

@@ -90,27 +90,9 @@ func resourceUser() *schema.Resource {
 				Optional: true,
 			},
 			"roles": &schema.Schema{
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"org_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-						"group_id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-						"role_name": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-					},
-				},
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	}
@@ -119,29 +101,15 @@ func resourceUser() *schema.Resource {
 func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 	apiClient := m.(*client.Client)
-	userRoles := d.Get("roles").([]interface{})
-	ois := make([]string, 0)
+	userRoles := d.Get("roles").(*schema.Set).List()
+	roles := make([]string, len(userRoles))
 
-	for _, role := range userRoles {
-		i := role.(map[string]interface{})
-		orgid := i["org_id"].(string)
-		role := i["role_name"].(string)
-		groupid := i["group_id"].(string)
-		if groupid != "" {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  "Unless he accept the invitation,he cannot br given a project",
-			})
-			return diags
-		}
-		if orgid != "" {
-			ois = append(ois, role)
-		}
-
+	for i, role := range userRoles {
+		roles[i] = role.(string)
 	}
 	user := client.NewUser{
 		Username: d.Get("username").(string),
-		Roles:    ois,
+		Roles:    roles,
 	}
 
 	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
@@ -192,13 +160,11 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 			d.Set("email_address", user.EmailAddress)
 			d.Set("first_name", user.FirstName)
 			d.Set("last_name", user.LastName)
-			roles := make([]map[string]interface{}, 0)
+			roles := make([]string, 0)
 			for _, v := range user.Roles {
-				role := make(map[string]interface{})
-				role["org_id"] = v.OrgID
-				role["role_name"] = v.RoleName
-				role["group_id"] = v.GroupID
-				roles = append(roles, role)
+				if v.OrgID != "" {
+					roles = append(roles, v.RoleName)
+				}
 			}
 			d.Set("roles", roles)
 			d.Set("username", user.Username)
@@ -240,23 +206,15 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 		}
 	}
 	userId = userInfo.ID
-	roles := d.Get("roles").([]interface{})
+	userRoles := d.Get("roles").(*schema.Set).List()
+	roles := make([]string, len(userRoles))
 
-	ois := []client.Role{}
-	for _, role := range roles {
-		i := role.(map[string]interface{})
-		oi := client.Role{
-			OrgID:    i["org_id"].(string),
-			RoleName: i["role_name"].(string),
-			GroupID:  i["group_id"].(string),
-		}
-		ois = append(ois, oi)
+	for i, role := range userRoles {
+		roles[i] = role.(string)
 	}
-	updatevalue := client.UpdateUser{
-		Roles: ois,
-	}
+
 	retryErr := resource.Retry(2*time.Minute, func() *resource.RetryError {
-		_, error = apiClient.UpdateUser(&updatevalue, userId)
+		_, error = apiClient.UpdateUser(roles, userId)
 		if error != nil {
 			if apiClient.IsRetry(error) {
 				return resource.RetryableError(error)
@@ -326,14 +284,13 @@ func resourceUserImporter(ctx context.Context, d *schema.ResourceData, m interfa
 		d.Set("email_address", user.EmailAddress)
 		d.Set("first_name", user.FirstName)
 		d.Set("last_name", user.LastName)
-		roles := make([]map[string]interface{}, 0)
+		roles := make([]string, 0)
 		for _, v := range user.Roles {
-			role := make(map[string]interface{})
-			role["org_id"] = v.OrgID
-			role["role_name"] = v.RoleName
-			role["group_id"] = v.GroupID
-			roles = append(roles, role)
+			if v.OrgID != "" {
+				roles = append(roles, v.RoleName)
+			}
 		}
+
 		d.Set("roles", roles)
 		d.Set("username", user.Username)
 
