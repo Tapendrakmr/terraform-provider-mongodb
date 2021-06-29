@@ -121,9 +121,9 @@ terraform {
 }
 
 provider "mongodb" {
-  publickey  = "[PUBLIC KEY]"
-  privatekey = "[PRIVATE KEY]"
-  orgid="[ORGANIZATION ID]"
+  mongodb_public_key = "[MONGODBCLOUD_PUBLIC_KEY]"
+  mongodb_private_key = "[MONGODBCLOUD_PRIVATE_KEY]"
+  mongodb_orgid = "[MONGODBCLOUD_ORGID]"
 }
 
 resource "mongodb_user" "user1" {
@@ -141,7 +141,9 @@ output "datasource_user" {
 ```
 
 ## Argument Reference
-
+- `mongodb_public_key` (Required,string) - The MongoDB Public Key. This may also be set via the `"MONGODBCLOUD_PUBLIC_KEY"` environment variable.
+- `mongodb_private_key` (Required,string) - The MongoDB Private Key. This may also be set via the `"MONGODBCLOUD_PRIVATE_KEY"` environment variable.
+- `mongodb_orgid`  (Required,string) - The MongoDB OrgId. This may also be set via the `"MONGODBCLOUD_ORGID"` environment variable.
 - `email` (string) - The email id associated with the user account.
 - `org_id` (string) - The id associated with the organization.
 - `role_name` (List) - Each string in the array represents a organiation role you want to assign to the user.You must specify an array even if you are only associating a single role with the team. The following are valid roles:
