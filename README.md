@@ -88,7 +88,7 @@ move terraform-provider-mongodb.exe %APPDATA%\terraform.d\plugins\mongdb.com\edu
 
 ### Update the user
 
-:heavy_exclamation_mark: [IMPORTANT] : If you own an organization or project, you can update the user roles for any user with membership in that organization or project. You cannot modify any other user profile information.
+*If you own an organization or project, you can update the user roles for any user with membership in that organization or project. You cannot modify any other user profile information.*
 
 1. Update the data of the user resource block as show in [example usage](#example-usage) un the basic terraform commands to update user.User is not allowed to update email.
 <br>
@@ -141,12 +141,11 @@ output "datasource_user" {
 ```
 
 ## Argument Reference
-- `mongodb_public_key` (Required,string) - The MongoDB Public Key. This may also be set via the `"MONGODBCLOUD_PUBLIC_KEY"` environment variable.
-- `mongodb_private_key` (Required,string) - The MongoDB Private Key. This may also be set via the `"MONGODBCLOUD_PRIVATE_KEY"` environment variable.
-- `mongodb_orgid`  (Required,string) - The MongoDB OrgId. This may also be set via the `"MONGODBCLOUD_ORGID"` environment variable.
-- `email` (string) - The email id associated with the user account.
-- `org_id` (string) - The id associated with the organization.
-- `role_name` (List) - Each string in the array represents a organiation role you want to assign to the user.You must specify an array even if you are only associating a single role with the team. The following are valid roles:
+- `mongodb_public_key` (required, string) - The MongoDB Public Key. This may also be set via the `"MONGODBCLOUD_PUBLIC_KEY"` environment variable.
+- `mongodb_private_key` (required, string) - The MongoDB Private Key. This may also be set via the `"MONGODBCLOUD_PRIVATE_KEY"` environment variable.
+- `mongodb_orgid`  (required, string) - The MongoDB OrgId. This may also be set via the `"MONGODBCLOUD_ORGID"` environment variable.
+- `email` (required, string) - The email id associated with the user account.
+- `roles` (required, list) - Each string in the array represents a organiation role you want to assign to the user.You must specify an array even if you are only associating a single role with the team. The following are valid roles:
  
   - ORG_OWNER
   - ORG_GROUP_CREATOR
